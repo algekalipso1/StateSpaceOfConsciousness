@@ -1,0 +1,171 @@
+---
+title: "Dimensional Drugs"
+author: "Andres Gomez Emilsson"
+date: "May 1, 2015"
+output: html_document
+---
+
+
+```{r}
+survey_link <- "https://stanforduniversity.qualtrics.com/SE/?SID=SV_8livWpsgfeknTAV"
+dc <- read.csv("cleaned_data.csv")
+
+```
+
+
+```{r simple_visuals}
+# Histogram of the drugs contributed:
+names(dc)
+
+hist(table(dc$substance), breaks = 20)
+
+```
+
+
+
+
+Now we perform factor analysis
+
+```{r factor_analysis}
+
+fit <- factanal(dc[3:54], 6, rotation="varimax", scores="regression")
+print(fit, digits=2, cutoff=.25, sort=TRUE)
+
+
+
+# plot factor 1 by factor 2 
+load <- fit$loadings[,c(1, 2)]
+plot(load,type="n", xlab = "Significance", ylab = "Slow Euphoria") # set up plot 
+text(load,labels=colnames(dc[3:54]),cex=.6) # add variable names
+
+# plot factor 1 by factor 2 
+load <- fit$loadings[,c(2, 4)]
+plot(load,type="n", xlab = "Fast Euphoria", ylab = "Cost-Benefit") # set up plot 
+text(load,labels=colnames(dc[3:54]),cex=.6) # add variable names
+
+# plot factor 1 by factor 2 
+load <- fit$loadings[,c(5, 6)]
+plot(load,type="n", xlab = "Clarity", ylab = "Stimuli Seeking") # set up plot 
+text(load,labels=colnames(dc[3:54]),cex=.6) # add variable names
+```
+
+
+Visualize means.
+
+```{r visualize}
+dcv <- cbind(dc, fit$scores)
+dcv <- subset(dcv, dc$samples > 1)
+remaining_observations <- length(dcv$age)
+substances_reviewerd_by_name <- dcv$substance
+
+pq <- ggplot(dcv, aes(Factor2, Factor3)) 
+pq + geom_text(size=3, aes(label=substance, colour=factor(substance)))
+
+aggregated_by_substance <- aggregate(cbind(Factor1,
+                               Factor2,
+                               Factor3,
+                               Factor4,
+                               Factor5,
+                               Factor6) ~ 
+                                 substances_reviewerd_by_name, data=dcv, mean)
+
+
+#Inverting so that + is better
+aggregated_by_substance$Factor2 <- -1*aggregated_by_substance$Factor2
+aggregated_by_substance$Factor3 <- -1*aggregated_by_substance$Factor3
+aggregated_by_substance$Factor4 <- -1*aggregated_by_substance$Factor4
+
+
+
+
+pq_mean <- ggplot(aggregated_by_substance, aes(Factor1, Factor2)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name)) + xlab("Significance") + ylab("Slow Euphoria")
+
+
+pq_mean <- ggplot(aggregated_by_substance, aes(Factor3, Factor4)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name)) + xlab("Fast Euphoria") + ylab("Cost-Benefit")
+
+
+pq_mean <- ggplot(aggregated_by_substance, aes(Factor5, Factor6)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name)) + xlab("Clarity") + ylab("Stimuli Seeking")
+
+
+
+pq_mean <- ggplot(aggregated_by_substance, aes(Factor2, Factor3)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name)) + xlab("Slow Euphoria") + ylab("Fast Euphoria")
+
+
+
+pq_mean <- ggplot(aggregated_by_substance, aes(Factor2, Factor3)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name)) + xlab("Slow Euphoria") + ylab("Fast Euphoria")
+
+
+```
+
+
+
+Now visualize the drugs along with color-coded number of samples for each drug.
+
+```{r Depending_On_Times_Taken}
+aggregated_by_substance_by_times <- aggregate(cbind(Factor1,
+                               Factor2,
+                               Factor3,
+                               Factor4,
+                               Factor5,
+                               Factor6) ~ 
+                                 substances_reviewerd_by_name*samples, data=dcv, mean)
+
+aggregated_by_substance_by_times$Factor2 <- -1*aggregated_by_substance_by_times$Factor2
+aggregated_by_substance_by_times$Factor4 <- -1*aggregated_by_substance_by_times$Factor4
+
+
+pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor2, Factor3)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Slow Euphoria") + ylab("Fast Euphoria")
+
+
+
+
+pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor1, Factor3)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Spiritual Euphoria") + ylab("Fast Euphoria")
+
+
+pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor1, Factor2)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Spiritual Euphoria") + ylab("Slow Euphoria")
+
+
+
+pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor4, Factor5)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Cost-Benefit") + ylab("Clarity")
+
+
+pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor4, Factor6)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Cost-Benefit") + ylab("Stimulus Seeking")
+
+
+pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor5, Factor6)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Clarity") + ylab("Stimulus Seeking")
+
+
+
+pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor1, Factor5)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Spiritual Euphoria") + ylab("Clarity")
+
+```
+
+
+
+
+Summary for all observations
+```{r, echo=FALSE}
+means_by_substance <- aggregate(cbind(Stimulating, Anxiety_producing, Calming, Love, Blissful, Energetic,
+                                      Sociable, Charming, Bizarre, Intense, Difficult, Funny,
+                                      Interesting, Visual, Spiritual, Enhanced_body_feeling, Bodily_discomfort, Enhanced_imagination,
+                                      Rational, Irritating, Confusing, Fast_paced, Trivial, Long_lasting, 
+                                      Emotional, Constructive, Self_centered, Dangerous, Erotic,
+                                      Worth_it, Sneaky, Too_much, Sobering, Spaced_out, Colorful,
+                                      Relieving, Insightful, Profound, Mystical, Incredible, Life_changing, 
+                                      Impairing, Subtle, Easy_to_overdoo, Hard_to_resist, Intellectual, Enhances_aesthetics,
+                                      Digital, Artistic, Enjoyment_of_music, Delight_in_food)
+                                ~ substance, data=dc, mean)
+means_by_substance
+```
