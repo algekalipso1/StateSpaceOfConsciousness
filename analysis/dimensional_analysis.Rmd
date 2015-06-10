@@ -7,8 +7,19 @@ output: html_document
 
 
 ```{r}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
 survey_link <- "https://stanforduniversity.qualtrics.com/SE/?SID=SV_8livWpsgfeknTAV"
-dc <- read.csv("cleaned_data.csv")
+dc <- read.csv("./data/cleaned_data.csv")
+
+# The meanding of the variable "times_taken" is the following:
+# 1  2    3     4      5       6           7
+# 1, 2-3, 4-10, 11-30, 31-100, 101-1000, > 1000
+
+hist(dc$times_taken)
 
 ```
 
@@ -47,6 +58,15 @@ text(load,labels=colnames(dc[3:54]),cex=.6) # add variable names
 load <- fit$loadings[,c(5, 6)]
 plot(load,type="n", xlab = "Clarity", ylab = "Stimuli Seeking") # set up plot 
 text(load,labels=colnames(dc[3:54]),cex=.6) # add variable names
+
+
+# plot factor 1 by factor 4
+load <- fit$loadings[,c(1, 4)]
+plot(load,type="n", xlab = "Significance", ylab = "Clarity") # set up plot 
+text(load,labels=colnames(dc[3:54]),cex=.6) # add variable names
+
+
+
 ```
 
 
@@ -58,7 +78,7 @@ dcv <- subset(dcv, dc$samples > 1)
 remaining_observations <- length(dcv$age)
 substances_reviewerd_by_name <- dcv$substance
 
-pq <- ggplot(dcv, aes(Factor2, Factor3)) 
+pq <- ggplot(dcv, aes(Factor2, Factor3))
 pq + geom_text(size=3, aes(label=substance, colour=factor(substance)))
 
 aggregated_by_substance <- aggregate(cbind(Factor1,
@@ -72,10 +92,10 @@ aggregated_by_substance <- aggregate(cbind(Factor1,
 
 #Inverting so that + is better
 aggregated_by_substance$Factor2 <- -1*aggregated_by_substance$Factor2
-aggregated_by_substance$Factor3 <- -1*aggregated_by_substance$Factor3
 aggregated_by_substance$Factor4 <- -1*aggregated_by_substance$Factor4
 
-
+# Creating a composite score that uses an equal weighting for each euphoria factor
+aggregated_by_substance$euphoria <- (aggregated_by_substance$Factor1 + aggregated_by_substance$Factor2 + aggregated_by_substance$Factor3) / 3
 
 
 pq_mean <- ggplot(aggregated_by_substance, aes(Factor1, Factor2)) 
@@ -100,6 +120,15 @@ pq_mean <- ggplot(aggregated_by_substance, aes(Factor2, Factor3))
 pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name)) + xlab("Slow Euphoria") + ylab("Fast Euphoria")
 
 
+# Plotting euphoria score against cost benefit
+pq_mean <- ggplot(aggregated_by_substance, aes(euphoria, Factor4))
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name)) + xlab("Euphoria score") + ylab("Cost Benefit")
+
+# Plotting euphoria score against clarity
+pq_mean <- ggplot(aggregated_by_substance, aes(euphoria, Factor5))
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name)) + xlab("Euphoria score") + ylab("Clarity")
+
+
 ```
 
 
@@ -107,7 +136,7 @@ pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name)) + xlab("Slo
 Now visualize the drugs along with color-coded number of samples for each drug.
 
 ```{r Depending_On_Times_Taken}
-aggregated_by_substance_by_times <- aggregate(cbind(Factor1,
+aggregated_by_substance_by_samples <- aggregate(cbind(Factor1,
                                Factor2,
                                Factor3,
                                Factor4,
@@ -115,41 +144,58 @@ aggregated_by_substance_by_times <- aggregate(cbind(Factor1,
                                Factor6) ~ 
                                  substances_reviewerd_by_name*samples, data=dcv, mean)
 
-aggregated_by_substance_by_times$Factor2 <- -1*aggregated_by_substance_by_times$Factor2
-aggregated_by_substance_by_times$Factor4 <- -1*aggregated_by_substance_by_times$Factor4
+aggregated_by_substance_by_samples$Factor2 <- -1*aggregated_by_substance_by_samples$Factor2
+aggregated_by_substance_by_samples$Factor4 <- -1*aggregated_by_substance_by_samples$Factor4
 
 
-pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor2, Factor3)) 
+# Euphoria score
+aggregated_by_substance_by_samples$euphoria <- (aggregated_by_substance_by_samples$Factor1 + aggregated_by_substance_by_samples$Factor2 + aggregated_by_substance_by_samples$Factor3) / 3
+
+pq_mean <- ggplot(aggregated_by_substance_by_samples, aes(Factor2, Factor3)) 
 pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Slow Euphoria") + ylab("Fast Euphoria")
 
 
 
 
-pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor1, Factor3)) 
+pq_mean <- ggplot(aggregated_by_substance_by_samples, aes(Factor1, Factor3)) 
 pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Spiritual Euphoria") + ylab("Fast Euphoria")
 
 
-pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor1, Factor2)) 
+pq_mean <- ggplot(aggregated_by_substance_by_samples, aes(Factor1, Factor2)) 
 pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Spiritual Euphoria") + ylab("Slow Euphoria")
 
 
 
-pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor4, Factor5)) 
+pq_mean <- ggplot(aggregated_by_substance_by_samples, aes(Factor4, Factor5)) 
 pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Cost-Benefit") + ylab("Clarity")
 
 
-pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor4, Factor6)) 
+pq_mean <- ggplot(aggregated_by_substance_by_samples, aes(Factor4, Factor6)) 
 pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Cost-Benefit") + ylab("Stimulus Seeking")
 
 
-pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor5, Factor6)) 
+pq_mean <- ggplot(aggregated_by_substance_by_samples, aes(Factor5, Factor6)) 
 pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Clarity") + ylab("Stimulus Seeking")
 
 
 
-pq_mean <- ggplot(aggregated_by_substance_by_times, aes(Factor1, Factor5)) 
+pq_mean <- ggplot(aggregated_by_substance_by_samples, aes(Factor1, Factor5)) 
 pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Spiritual Euphoria") + ylab("Clarity")
 
+
+
+pq_mean <- ggplot(aggregated_by_substance_by_samples, aes(Factor1, Factor5)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Spiritual Euphoria") + ylab("Clarity")
+
+
+# Euphoria Score and Cost Benefit
+pq_mean <- ggplot(aggregated_by_substance_by_samples, aes(euphoria, Factor4)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Euphoria Score") + ylab("Cost Benefit")
+
+
+# Euphoria Score and Clarity
+pq_mean <- ggplot(aggregated_by_substance_by_samples, aes(euphoria, Factor5)) 
+pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=samples^.5)) + scale_colour_gradientn(colours=rainbow(4)) + xlab("Euphoria Score") + ylab("Clarity")
 ```
 
 
@@ -157,7 +203,7 @@ pq_mean + geom_text(size=4, aes(label=substances_reviewerd_by_name, colour=sampl
 
 Summary for all observations
 ```{r, echo=FALSE}
-means_by_substance <- aggregate(cbind(Stimulating, Anxiety_producing, Calming, Love, Blissful, Energetic,
+means_by_substance <- aggregate(cbind(samples, Stimulating, Anxiety_producing, Calming, Love, Blissful, Energetic,
                                       Sociable, Charming, Bizarre, Intense, Difficult, Funny,
                                       Interesting, Visual, Spiritual, Enhanced_body_feeling, Bodily_discomfort, Enhanced_imagination,
                                       Rational, Irritating, Confusing, Fast_paced, Trivial, Long_lasting, 
